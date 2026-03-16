@@ -1,0 +1,36 @@
+{
+  "name": "openrouter-free-proxy",
+  "version": "1.0.0",
+  "description": "本地 OpenRouter 免费模型代理服务，支持动态切换模型，无需修改编码工具配置",
+  "type": "module",
+  "main": "src/server.ts",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
+  "keywords": [
+    "openrouter",
+    "proxy",
+    "ai",
+    "llm",
+    "free",
+    "local"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@hono/node-server": "^1.11.0",
+    "dotenv": "^16.4.5",
+    "hono": "^4.2.9",
+    "tsx": "^4.9.0",
+    "typescript": "^5.4.5"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/supertest": "^7.2.0",
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.6"
+  }
+}
