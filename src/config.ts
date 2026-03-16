@@ -24,9 +24,15 @@ export async function getConfig(): Promise<Config> {
     return cachedConfig;
   }
 
-  const content = await readFile(CONFIG_PATH, 'utf-8');
-  cachedConfig = JSON.parse(content) as Config;
-  return cachedConfig;
+  try {
+    const content = await readFile(CONFIG_PATH, 'utf-8');
+    cachedConfig = JSON.parse(content) as Config;
+    return cachedConfig;
+  } catch {
+    await writeFile(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2));
+    cachedConfig = DEFAULT_CONFIG;
+    return cachedConfig;
+  }
 }
 
 export async function setConfig(config: Partial<Config>): Promise<Config> {
@@ -42,3 +48,17 @@ export const ENV = {
   OPENROUTER_BASE_URL: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
   PORT: Number(process.env.PORT) || 8765
 };
+
+export async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeout = 10000
+): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}

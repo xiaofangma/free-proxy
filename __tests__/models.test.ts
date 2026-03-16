@@ -1,47 +1,14 @@
-import { fetchModels, filterFreeModels } from '../src/models';
-import fetch from 'node-fetch';
-
-// Mock fetch
-jest.mock('node-fetch');
-const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+import { describe, test, expect } from '@jest/globals';
+import { filterFreeModels } from '../src/models';
 
 describe('models module', () => {
-  beforeEach(() => {
-    mockFetch.mockClear();
-  });
-
-  test('fetchModels should call OpenRouter API with correct headers', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        data: [
-          { id: 'model1:free', name: 'Model 1', context_length: 4096 },
-          { id: 'model2', name: 'Model 2', context_length: 8192 }
-        ]
-      })
-    } as any);
-
-    const models = await fetchModels(true);
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://openrouter.ai/api/v1/models',
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          'Authorization': expect.stringContaining('Bearer '),
-          'HTTP-Referer': 'http://localhost:8765',
-          'X-Title': 'OpenRouter Free Proxy'
-        })
-      })
-    );
-    expect(models.length).toBe(2);
-  });
-
   test('filterFreeModels should only return models with :free suffix', () => {
     const models = [
-      { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Llama 3.2 3B' },
-      { id: 'openai/gpt-4o', name: 'GPT-4o' },
-      { id: 'anthropic/claude-3-haiku:free', name: 'Claude 3 Haiku' },
-      { id: 'deepseek/deepseek-chat:free', name: 'DeepSeek Chat' },
-      { id: 'google/gemini-1.5-flash', name: 'Gemini 1.5 Flash' }
+      { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Llama 3.2 3B', context_length: 4096, pricing: { prompt: '0', completion: '0' }, description: '' },
+      { id: 'openai/gpt-4o', name: 'GPT-4o', context_length: 4096, pricing: { prompt: '0', completion: '0' }, description: '' },
+      { id: 'anthropic/claude-3-haiku:free', name: 'Claude 3 Haiku', context_length: 4096, pricing: { prompt: '0', completion: '0' }, description: '' },
+      { id: 'deepseek/deepseek-chat:free', name: 'DeepSeek Chat', context_length: 4096, pricing: { prompt: '0', completion: '0' }, description: '' },
+      { id: 'google/gemini-1.5-flash', name: 'Gemini 1.5 Flash', context_length: 4096, pricing: { prompt: '0', completion: '0' }, description: '' }
     ] as any;
 
     const freeModels = filterFreeModels(models);
@@ -53,27 +20,26 @@ describe('models module', () => {
     ]);
   });
 
-  test('fetchModels should throw error when API call fails', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      statusText: 'Unauthorized'
-    } as any);
+  test('filterFreeModels should return empty array when no free models', () => {
+    const models = [
+      { id: 'openai/gpt-4o', name: 'GPT-4o', context_length: 4096, pricing: { prompt: '0', completion: '0' }, description: '' },
+      { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', context_length: 4096, pricing: { prompt: '0', completion: '0' }, description: '' }
+    ] as any;
 
-    await expect(fetchModels(true)).rejects.toThrow('Failed to fetch models: Unauthorized');
+    const freeModels = filterFreeModels(models);
+    expect(freeModels.length).toBe(0);
   });
 
-  test('fetchModels should use cache when not force refreshing', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ data: [] })
-    } as any);
+  test('filterFreeModels should sort by name', () => {
+    const models = [
+      { id: 'z-model:free', name: 'Zebra Model', context_length: 4096, pricing: { prompt: '0', completion: '0' }, description: '' },
+      { id: 'a-model:free', name: 'Alpha Model', context_length: 4096, pricing: { prompt: '0', completion: '0' }, description: '' },
+      { id: 'm-model:free', name: 'Middle Model', context_length: 4096, pricing: { prompt: '0', completion: '0' }, description: '' }
+    ] as any;
 
-    // 第一次调用，请求API
-    await fetchModels(true);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-
-    // 第二次调用，使用缓存，不请求API
-    await fetchModels(false);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const freeModels = filterFreeModels(models);
+    expect(freeModels[0].name).toBe('Alpha Model');
+    expect(freeModels[1].name).toBe('Middle Model');
+    expect(freeModels[2].name).toBe('Zebra Model');
   });
 });

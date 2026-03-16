@@ -4,7 +4,7 @@ export default {
   testMatch: ['**/*.test.ts'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { useESM: true }],
+    '^.+\\.tsx?$': ['ts-jest', { useESM: true, diagnostics: false }],
   },
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {

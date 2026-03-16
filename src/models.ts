@@ -1,4 +1,4 @@
-import { ENV } from './config';
+import { ENV, fetchWithTimeout } from './config';
 
 interface OpenRouterModel {
   id: string;
@@ -21,7 +21,7 @@ export async function fetchModels(forceRefresh = false): Promise<OpenRouterModel
     return cachedModels;
   }
 
-  const response = await fetch(`${ENV.OPENROUTER_BASE_URL}/models`, {
+  const response = await fetchWithTimeout(`${ENV.OPENROUTER_BASE_URL}/models`, {
     headers: {
       'Authorization': `Bearer ${ENV.OPENROUTER_API_KEY}`,
       'HTTP-Referer': 'http://localhost:8765',
@@ -30,7 +30,9 @@ export async function fetchModels(forceRefresh = false): Promise<OpenRouterModel
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch models: ${response.statusText}`);
+    const errMsg = `Failed to fetch models: ${response.statusText}`;
+    console.error(`[${new Date().toISOString()}] ${errMsg}`);
+    throw new Error(errMsg);
   }
 
   const data = (await response.json()) as { data: OpenRouterModel[] };

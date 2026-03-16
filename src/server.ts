@@ -3,10 +3,12 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { stream } from 'hono/streaming';
-import { getConfig, setConfig, ENV } from './config';
+import { getConfig, setConfig, ENV, fetchWithTimeout } from './config';
 import { fetchModels, filterFreeModels } from './models';
 
 const app = new Hono();
+
+export { app, getConfig, setConfig };
 
 // CORS 配置
 app.use('/*', cors({
@@ -51,11 +53,11 @@ async function proxyRequest(
     }
   });
 
-  return await fetch(`${ENV.OPENROUTER_BASE_URL}${path}`, {
+  return await fetchWithTimeout(`${ENV.OPENROUTER_BASE_URL}${path}`, {
     method,
     headers: proxyHeaders,
     body: JSON.stringify(body)
-  });
+  }, 30000);
 }
 
 // 1. Chat Completions 接口
@@ -94,6 +96,7 @@ app.post('/v1/chat/completions', async (c) => {
     const data = await response.json();
     return c.json(data, { status: response.status as any });
   } catch (err: any) {
+    console.error(`[${new Date().toISOString()}] Request error:`, err.message);
     return c.json({
       error: {
         message: err.message,
@@ -139,6 +142,7 @@ app.put('/admin/model', async (c) => {
     }
     
     const newConfig = await setConfig({ default_model: model });
+    console.log(`[${new Date().toISOString()}] Model switched to: ${model}`);
     return c.json({ model: newConfig.default_model });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
@@ -146,8 +150,10 @@ app.put('/admin/model', async (c) => {
 });
 
 // 启动服务
-console.log(`🚀 OpenRouter Free Proxy starting on http://localhost:${ENV.PORT}`);
-serve({
-  fetch: app.fetch,
-  port: ENV.PORT
-});
+if (process.env.NODE_ENV !== 'test') {
+  console.log(`🚀 OpenRouter Free Proxy starting on http://localhost:${ENV.PORT}`);
+  serve({
+    fetch: app.fetch,
+    port: ENV.PORT
+  });
+}
