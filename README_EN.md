@@ -8,11 +8,20 @@ One-line overview: free, easy to use, and enough for everyday OpenClaw usage.
 
 ### Free-tier overview
 
-| Option | Stability | Quota | Cost |
-|---|---:|---|---:|
-| `free_proxy` | Medium | Estimate: ~3.3k requests/day (~100k/month), about 300USD/month equivalent, supports 3–5 concurrent users | Free |
-| US paid coding plan | High | About 200–10,000 requests/month | 20-200USD/month |
-| China paid coding plan | High | Lite: 18,000 requests/month; Pro: 90,000 requests/month | 20-200RMB/month |
+**`free_proxy`**  
+Stability: Medium  
+Quota: Estimate ~3.3k requests/day (~100k/month), about 300USD/month equivalent, supports 3–5 concurrent users  
+Cost: Free
+
+**US paid coding plan**  
+Stability: High  
+Quota: About 200–10,000 requests/month  
+Cost: 20-200USD/month
+
+**China paid coding plan**  
+Stability: High  
+Quota: Lite 18,000 requests/month; Pro 90,000 requests/month  
+Cost: 20-200RMB/month
 
 ## Core features
 
