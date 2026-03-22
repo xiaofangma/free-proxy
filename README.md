@@ -16,7 +16,7 @@
 
 
 
-## 核心功能（快速看）
+## 核心功能
 
 - 聚合 8 家 provider（OpenRouter / Groq / OpenCode / Gemini / GitHub Models / Mistral / Cerebras / SambaNova）
 - 自动回退：当前模型失败或限流时自动切换到可用模型
@@ -24,7 +24,7 @@
 - 本地 Web 配置：卡片式保存 API Key，直接选模型并更新 OpenClaw
 - OpenAI 兼容接口：`http://localhost:8765/v1`
 
-## 快速开始（3 步）
+## 快速开始
 
 1) 克隆并安装依赖
 
@@ -47,7 +47,7 @@ npm start
 - 访问：`http://localhost:8765`
 - 保存 Key 后直接选择模型开始使用
 
-## 常见问题（简短）
+## 常见问题
 
 - 网络错误：确认服务已启动 `npm start`，使用 `http://localhost:8765`
 - 无可用模型：免费模型可能被临时限流，点“刷新模型列表”或手动添加可用模型

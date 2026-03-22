@@ -22,7 +22,7 @@ One-line overview: free, easy to use, and enough for everyday OpenClaw usage.
 - Local web UI with card-style settings, model selection, and OpenClaw config updates
 - OpenAI-compatible endpoint: `http://localhost:8765/v1`
 
-## Quick start (3 steps)
+## Quick start
 
 1) Clone and install dependencies
 
