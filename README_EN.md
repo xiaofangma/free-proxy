@@ -14,8 +14,6 @@ One-line overview: free, easy to use, and enough for everyday OpenClaw usage.
 | US paid coding plan | High | About 200–10,000 requests/month | 20-200USD/month |
 | China paid coding plan | High | Lite 18,000 requests/month<br>Pro 90,000 requests/month | 20-200RMB/month |
 
-Note: the numbers above are conservative estimates and vary by provider/region/account. Alibaba Coding Plan reference: https://developer.aliyun.com/article/1713813
-
 ## Core features
 
 - Aggregates 8 providers: OpenRouter / Groq / OpenCode / Gemini / GitHub Models / Mistral / Cerebras / SambaNova

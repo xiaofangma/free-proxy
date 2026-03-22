@@ -14,8 +14,6 @@
 | 美国付费 coding plan | 高 | 约 200–10,000 次/月 | 20-200USD/月 |
 | 国内付费 coding plan | 高 | Lite 18,000 次/月<br>Pro 90,000 次/月 | 20-200RMB/月 |
 
-说明：以上额度为保守估算，实际值会因 provider/地区/账号而异。阿里云百炼示例来源：https://developer.aliyun.com/article/1713813
-
 
 
 ## 核心功能（快速看）
