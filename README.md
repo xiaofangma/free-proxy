@@ -1,4 +1,4 @@
-# free_proxy
+# free-proxy
 
 [中文](README.md) | [English](README_EN.md)
 
@@ -10,7 +10,7 @@
 
 | 方案 | 稳定性 | 额度 | 成本 |
 |---|---|---|---|
-| `free_proxy` | 中 | 估算约 3.3k 次/日<br>约 100k 次/月<br>约 300USD/月等价 | 免费 |
+| `free-proxy` | 中 | 估算约 3.3k 次/日<br>约 100k 次/月<br>约 300USD/月等价 | 免费 |
 | 美国付费 coding plan | 高 | 约 200–10,000 次/月 | 20-200USD/月 |
 | 国内付费 coding plan | 高 | Lite 18,000 次/月<br>Pro 90,000 次/月 | 20-200RMB/月 |
 
@@ -30,7 +30,7 @@
 
 ```bash
 git clone https://github.com/lichengiggs/free-proxy.git
-cd free_proxy
+cd free-proxy
 npm install
 ```
 

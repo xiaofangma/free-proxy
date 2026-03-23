@@ -1,4 +1,4 @@
-# free_proxy
+# free-proxy
 
 [中文](README.md) | [English](README_EN.md)
 
@@ -10,7 +10,7 @@ One-line overview: free, easy to use, and enough for everyday OpenClaw usage.
 
 | Option | Stability | Quota | Cost |
 |---|---|---|---|
-| `free_proxy` | Medium | Estimate ~3.3k requests/day<br>~100k requests/month<br>~300USD/month equivalent | Free |
+| `free-proxy` | Medium | Estimate ~3.3k requests/day<br>~100k requests/month<br>~300USD/month equivalent | Free |
 | US paid coding plan | High | About 200–10,000 requests/month | 20-200USD/month |
 | China paid coding plan | High | Lite 18,000 requests/month<br>Pro 90,000 requests/month | 20-200RMB/month |
 
@@ -28,7 +28,7 @@ One-line overview: free, easy to use, and enough for everyday OpenClaw usage.
 
 ```bash
 git clone https://github.com/lichengiggs/free-proxy.git
-cd free_proxy
+cd free-proxy
 npm install
 ```
 

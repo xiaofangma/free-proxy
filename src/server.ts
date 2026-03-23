@@ -699,7 +699,7 @@ app.get('/api/health-check', async (c) => {
     provider_health: providerHealth,
     openclaw,
     hint: hasAnyValidProvider
-      ? '环境可用，建议在客户端执行 /model free_proxy/auto'
+      ? '环境可用，建议在客户端执行 /model free-proxy/auto'
       : '请先配置至少一个可用 provider key'
   });
 });

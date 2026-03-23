@@ -34,9 +34,9 @@ describe('OpenClaw Config', () => {
     expect(existsSync(CONFIG_PATH)).toBe(true);
 
     const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
-    expect(config.models.providers.free_proxy).toBeDefined();
-    expect(config.agents.defaults.models['free_proxy/auto']).toBeDefined();
-    expect(config.agents.defaults.model.primary).toBe('free_proxy/auto');
+    expect(config.models.providers['free-proxy']).toBeDefined();
+    expect(config.agents.defaults.models['free-proxy/auto']).toBeDefined();
+    expect(config.agents.defaults.model.primary).toBe('free-proxy/auto');
   });
 
   test('configureOpenClawModel fallback mode should only inject provider and allowlist when defaults.model is missing', async () => {
@@ -45,8 +45,8 @@ describe('OpenClaw Config', () => {
 
     expect(result.success).toBe(true);
     const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
-    expect(config.models.providers.free_proxy).toBeDefined();
-    expect(config.agents.defaults.models['free_proxy/auto']).toBeDefined();
+    expect(config.models.providers['free-proxy']).toBeDefined();
+    expect(config.agents.defaults.models['free-proxy/auto']).toBeDefined();
     expect(config.agents.defaults.model).toBeUndefined();
   });
 
@@ -71,7 +71,7 @@ describe('OpenClaw Config', () => {
     expect(config.agents.defaults.model.primary).toBe('openrouter/auto:free');
     expect(config.agents.defaults.model.fallbacks).toEqual([
       'groq/llama-3.1-8b-instant',
-      'free_proxy/auto'
+      'free-proxy/auto'
     ]);
   });
 
@@ -92,7 +92,7 @@ describe('OpenClaw Config', () => {
     const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
     expect(config.agents.defaults.model).toEqual({
       primary: 'openrouter/auto:free',
-      fallbacks: ['free_proxy/auto']
+      fallbacks: ['free-proxy/auto']
     });
   });
 
@@ -104,7 +104,7 @@ describe('OpenClaw Config', () => {
         defaults: {
           model: {
             primary: 'openrouter/auto:free',
-            fallbacks: ['free_proxy/auto']
+            fallbacks: ['free-proxy/auto']
           }
         }
       }
@@ -116,7 +116,7 @@ describe('OpenClaw Config', () => {
     expect(second.success).toBe(true);
 
     const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
-    expect(config.agents.defaults.model.fallbacks).toEqual(['free_proxy/auto']);
+    expect(config.agents.defaults.model.fallbacks).toEqual(['free-proxy/auto']);
   });
 
   test('configureOpenClawModel default mode should overwrite primary but keep existing fallbacks', async () => {
@@ -137,7 +137,7 @@ describe('OpenClaw Config', () => {
     expect(result.success).toBe(true);
 
     const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
-    expect(config.agents.defaults.model.primary).toBe('free_proxy/auto');
+    expect(config.agents.defaults.model.primary).toBe('free-proxy/auto');
     expect(config.agents.defaults.model.fallbacks).toEqual(['groq/llama-3.1-8b-instant']);
   });
 

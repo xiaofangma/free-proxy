@@ -4,9 +4,11 @@ import { join } from 'node:path';
 
 const OPENCLAW_DIR = process.env.OPENCLAW_TEST_DIR || join(homedir(), '.openclaw');
 const OPENCLAW_CONFIG_PATH = join(OPENCLAW_DIR, 'openclaw.json');
-const FREE_PROXY_PROVIDER_ID = 'free_proxy';
+const FREE_PROXY_PROVIDER_ID = 'free-proxy';
+const LEGACY_FREE_PROXY_PROVIDER_ID = 'free_proxy';
 const FREE_PROXY_MODEL_ID = 'auto';
-const FREE_PROXY_AGENT_MODEL = 'free_proxy/auto';
+const FREE_PROXY_AGENT_MODEL = 'free-proxy/auto';
+const LEGACY_FREE_PROXY_AGENT_MODEL = 'free_proxy/auto';
 
 export interface OpenClawConfigResult {
   exists: boolean;
@@ -82,6 +84,50 @@ function ensureRoot(config: OpenClawConfigShape): Required<Pick<OpenClawConfigSh
     config.agents.defaults.models = {};
   }
   return config as Required<Pick<OpenClawConfigShape, 'models' | 'agents'>> & OpenClawConfigShape;
+}
+
+function normalizeLegacyFreeProxyNames(config: OpenClawConfigShape): void {
+  const withRoot = ensureRoot(config);
+
+  const providers = withRoot.models.providers!;
+  if (providers[LEGACY_FREE_PROXY_PROVIDER_ID] && !providers[FREE_PROXY_PROVIDER_ID]) {
+    providers[FREE_PROXY_PROVIDER_ID] = providers[LEGACY_FREE_PROXY_PROVIDER_ID];
+  }
+  delete providers[LEGACY_FREE_PROXY_PROVIDER_ID];
+
+  const defaults = withRoot.agents.defaults!;
+  const models = defaults.models!;
+  if (models[LEGACY_FREE_PROXY_AGENT_MODEL] && !models[FREE_PROXY_AGENT_MODEL]) {
+    models[FREE_PROXY_AGENT_MODEL] = models[LEGACY_FREE_PROXY_AGENT_MODEL];
+  }
+  delete models[LEGACY_FREE_PROXY_AGENT_MODEL];
+
+  const currentModel = defaults.model;
+  if (typeof currentModel === 'string') {
+    defaults.model = currentModel === LEGACY_FREE_PROXY_AGENT_MODEL ? FREE_PROXY_AGENT_MODEL : currentModel;
+    return;
+  }
+
+  if (!isPlainObject(currentModel)) {
+    return;
+  }
+
+  const primaryRaw = currentModel.primary;
+  const primary = typeof primaryRaw === 'string'
+    ? (primaryRaw === LEGACY_FREE_PROXY_AGENT_MODEL ? FREE_PROXY_AGENT_MODEL : primaryRaw)
+    : undefined;
+
+  const fallbacks = Array.isArray(currentModel.fallbacks)
+    ? currentModel.fallbacks
+        .filter(item => typeof item === 'string')
+        .map(item => item === LEGACY_FREE_PROXY_AGENT_MODEL ? FREE_PROXY_AGENT_MODEL : item)
+    : undefined;
+
+  defaults.model = {
+    ...currentModel,
+    ...(primary ? { primary } : {}),
+    ...(fallbacks ? { fallbacks: [...new Set(fallbacks)] } : {})
+  };
 }
 
 function ensureFreeProxyProvider(config: OpenClawConfigShape): void {
@@ -203,6 +249,7 @@ export async function configureOpenClawModel(mode: OpenClawModelMode): Promise<C
   }
 
   const newConfig: OpenClawConfigShape = JSON.parse(JSON.stringify(existingConfig));
+  normalizeLegacyFreeProxyNames(newConfig);
   ensureFreeProxyProvider(newConfig);
   ensureAgentModelAllowlist(newConfig);
 
