@@ -2,7 +2,7 @@
 
 ## 1. 项目概述
 
-**项目名称**：Free Proxy (`free_proxy`)  
+**项目名称**：Free Proxy (`free-proxy`)  
 **核心目的**：本地多 Provider 免费 AI 模型代理服务  
 **技术栈**：TypeScript + Hono + Jest 30 + tsx  
 **运行环境**：Node.js (ESM 模式)  
@@ -147,9 +147,9 @@
 **功能**：
 - **检测**：检查 `~/.openclaw/openclaw.json` 是否存在且有效
 - **双模式配置**：
-  - `default`：把 `free_proxy/auto` 设为 OpenClaw 默认模型
+  - `default`：把 `free-proxy/auto` 设为 OpenClaw 默认模型
   - `fallback`：仅在用户已有 `agents.defaults.model` 时追加到 `fallbacks`
-- **结构补齐**：统一补齐 `models.providers.free_proxy` 与 `agents.defaults.models['free_proxy/auto']`
+- **结构补齐**：统一补齐 `models.providers.free-proxy` 与 `agents.defaults.models['free-proxy/auto']`
 - **兼容转换**：当 `agents.defaults.model` 为字符串时，fallback 模式会转换为 `{ primary, fallbacks }`
 - **去重**：fallback 追加使用去重，避免重复写入
 - **备份**：修改前自动创建备份（`openclaw.bak1`, `openclaw.bak2`, ...）
@@ -160,7 +160,7 @@
 {
   "models": {
     "providers": {
-      "free_proxy": {
+      "free-proxy": {
         "baseUrl": "http://localhost:8765/v1",
         "apiKey": "any_string",
         "api": "openai-completions",
@@ -171,10 +171,10 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "free_proxy/auto"
+        "primary": "free-proxy/auto"
       },
       "models": {
-        "free_proxy/auto": {}
+        "free-proxy/auto": {}
       }
     }
   }
@@ -188,7 +188,7 @@
     "defaults": {
       "model": {
         "primary": "openrouter/auto:free",
-        "fallbacks": ["...existing...", "free_proxy/auto"]
+        "fallbacks": ["...existing...", "free-proxy/auto"]
       }
     }
   }
@@ -336,10 +336,10 @@
 
 ### 5.5 OpenClaw 默认/备用模型拆分
 
-**背景**：原先只有“一键配置”按钮，用户容易误以为写入 provider 就等于生效；但若不写 `agents.defaults.model.primary`，OpenClaw 默认模型不会切到 `free_proxy/auto`。
+**背景**：原先只有“一键配置”按钮，用户容易误以为写入 provider 就等于生效；但若不写 `agents.defaults.model.primary`，OpenClaw 默认模型不会切到 `free-proxy/auto`。
 
 **当前策略**：
-- 默认按钮：写入 `agents.defaults.model.primary = 'free_proxy/auto'`
+- 默认按钮：写入 `agents.defaults.model.primary = 'free-proxy/auto'`
 - 备用按钮：
   - 若无 `agents.defaults.model`：只注入 provider + allowlist，不强建 fallback 链
   - 若已有 `agents.defaults.model`：追加到 `fallbacks` 且去重
@@ -379,7 +379,7 @@
 ## 7. 项目结构总结
 
 ```
-or_free_proxy/
+or_free-proxy/
 ├── src/
 │   ├── server.ts           # HTTP 路由和请求处理
 │   ├── config.ts           # 配置管理和 Provider Key 管理

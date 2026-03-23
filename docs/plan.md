@@ -7,7 +7,7 @@
 1. `设为 OpenClaw 默认模型`
 2. `设为 OpenClaw 备用模型`
 
-核心目的不是只把 `free_proxy` provider 写进去，而是让用户点击后，`openclaw.json` 里的实际使用模型也切到 `free_proxy/auto`。
+核心目的不是只把 `free-proxy` provider 写进去，而是让用户点击后，`openclaw.json` 里的实际使用模型也切到 `free-proxy/auto`。
 ---
 
 ## 关键结论
@@ -19,23 +19,23 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "free_proxy/auto",
-        "fallbacks": ["free_proxy/auto"]
+        "primary": "free-proxy/auto",
+        "fallbacks": ["free-proxy/auto"]
       },
       "models": {
-        "free_proxy/auto": {}
+        "free-proxy/auto": {}
       }
     }
   }
 }
 ```
 
-不是现在项目里写的 `agents.defaults.models['free_proxy/auto']` 这一层就够了；那只是 allowlist/模型声明，不等于“被设成默认模型”。
+不是现在项目里写的 `agents.defaults.models['free-proxy/auto']` 这一层就够了；那只是 allowlist/模型声明，不等于“被设成默认模型”。
 
 所以这次改造的本质是：
 
-- 保留 `models.providers.free_proxy`
-- 保留/补齐 `agents.defaults.models['free_proxy/auto']`
+- 保留 `models.providers.free-proxy`
+- 保留/补齐 `agents.defaults.models['free-proxy/auto']`
 - 再明确写入 `agents.defaults.model.primary` 或 `agents.defaults.model.fallbacks`
 
 ---
@@ -44,15 +44,15 @@
 
 现状在 `src/openclaw-config.ts`：
 
-1. 只写了 `models.providers.free_proxy`
-2. 只写了 `agents.defaults.models['free_proxy/auto'] = {}`
+1. 只写了 `models.providers.free-proxy`
+2. 只写了 `agents.defaults.models['free-proxy/auto'] = {}`
 3. 没有写 `agents.defaults.model.primary`
 4. 没有写 `agents.defaults.model.fallbacks`
 
 结果是：
 
 - 用户点了“更新 OpenClaw 配置”
-- `free_proxy` provider 的确进了配置文件
+- `free-proxy` provider 的确进了配置文件
 - 但 OpenClaw 的默认模型没切过去
 - 小白会理解成“free-proxy 没生效”
 
@@ -93,8 +93,8 @@ type OpenClawModelMode = 'default' | 'fallback';
 async function configureOpenClawModel(mode: OpenClawModelMode): Promise<ConfigureResult> {
   // 读取配置
   // 备份
-  // 注入 free_proxy provider
-  // 注入 agents.defaults.models['free_proxy/auto']
+  // 注入 free-proxy provider
+  // 注入 agents.defaults.models['free-proxy/auto']
   // 按 mode 修改 primary 或 fallbacks
   // 写回文件
 }
@@ -112,7 +112,7 @@ async function configureOpenClawModel(mode: OpenClawModelMode): Promise<Configur
 {
   "models": {
     "providers": {
-      "free_proxy": {
+      "free-proxy": {
         "baseUrl": "http://localhost:8765/v1",
         "apiKey": "any_string",
         "api": "openai-completions",
@@ -123,7 +123,7 @@ async function configureOpenClawModel(mode: OpenClawModelMode): Promise<Configur
   "agents": {
     "defaults": {
       "models": {
-        "free_proxy/auto": {}
+        "free-proxy/auto": {}
       }
     }
   }
@@ -132,13 +132,13 @@ async function configureOpenClawModel(mode: OpenClawModelMode): Promise<Configur
 
 这里要注意两个点：
 
-1. `free_proxy/auto` 是 agent 引用模型名
+1. `free-proxy/auto` 是 agent 引用模型名
 2. provider 内部 `models` 里的 `id` 仍然是 `auto`
 
 即：
 
-- provider 注册层：`free_proxy + auto`
-- agent 选择层：`free_proxy/auto`
+- provider 注册层：`free-proxy + auto`
+- agent 选择层：`free-proxy/auto`
 
 ---
 
@@ -149,14 +149,14 @@ async function configureOpenClawModel(mode: OpenClawModelMode): Promise<Configur
 #### 写入规则
 
 1. 确保 `agents.defaults.model` 存在
-2. 将 `agents.defaults.model.primary` 直接设为 `free_proxy/auto`
+2. 将 `agents.defaults.model.primary` 直接设为 `free-proxy/auto`
 3. 不强制改写用户现有 `fallbacks`
 4. 但如果 `fallbacks` 不存在，允许保持为空，不做额外扩展
 
 建议逻辑：
 
 ```ts
-const targetModel = 'free_proxy/auto';
+const targetModel = 'free-proxy/auto';
 
 if (!config.agents.defaults.model || typeof config.agents.defaults.model === 'string') {
   config.agents.defaults.model = {};
@@ -184,8 +184,8 @@ config.agents.defaults.model.primary = targetModel;
 
 只增加：
 
-- `models.providers.free_proxy`
-- `agents.defaults.models['free_proxy/auto']`
+- `models.providers.free-proxy`
+- `agents.defaults.models['free-proxy/auto']`
 
 不创建 `primary`
 不创建 `fallbacks`
@@ -204,13 +204,13 @@ config.agents.defaults.model.primary = targetModel;
 
 1. 如果 `model` 是字符串，需要先标准化成对象
 2. 保留原有 primary
-3. 在 `fallbacks` 末尾追加 `free_proxy/auto`
+3. 在 `fallbacks` 末尾追加 `free-proxy/auto`
 4. 去重，避免重复追加
 
 关键逻辑：
 
 ```ts
-const targetModel = 'free_proxy/auto';
+const targetModel = 'free-proxy/auto';
 const modelConfig = config.agents.defaults.model;
 
 if (typeof modelConfig === 'string') {
@@ -264,7 +264,7 @@ OpenClaw 允许：
     "defaults": {
       "model": {
         "primary": "openai/gpt-4.1",
-        "fallbacks": ["free_proxy/auto"]
+        "fallbacks": ["free-proxy/auto"]
       }
     }
   }
@@ -419,8 +419,8 @@ await fetch('/api/configure-openclaw', {
 
 根据 mode 区分：
 
-- 默认模型：`已把 free_proxy/auto 设为 OpenClaw 默认模型`
-- 备用模型：`已把 free_proxy/auto 加入 OpenClaw 备用模型`
+- 默认模型：`已把 free-proxy/auto 设为 OpenClaw 默认模型`
+- 备用模型：`已把 free-proxy/auto 加入 OpenClaw 备用模型`
 
 这样可以直接消除“到底有没有生效”的歧义。
 
@@ -429,7 +429,7 @@ await fetch('/api/configure-openclaw', {
 当前页面只提示：
 
 ```text
-在 OpenClaw 中使用：/model free_proxy/auto
+在 OpenClaw 中使用：/model free-proxy/auto
 ```
 
 建议补一行轻提示：
@@ -446,9 +446,9 @@ await fetch('/api/configure-openclaw', {
 ### 1. 常量
 
 ```ts
-const FREE_PROXY_PROVIDER_ID = 'free_proxy';
+const FREE_PROXY_PROVIDER_ID = 'free-proxy';
 const FREE_PROXY_MODEL_ID = 'auto';
-const FREE_PROXY_AGENT_MODEL = 'free_proxy/auto';
+const FREE_PROXY_AGENT_MODEL = 'free-proxy/auto';
 ```
 
 ### 2. provider 注入
@@ -512,21 +512,21 @@ config.agents.defaults.model.fallbacks = [...new Set([...existingFallbacks, FREE
 ### 必测
 
 1. 空配置文件下，`default` 模式会创建：
-   - `models.providers.free_proxy`
-   - `agents.defaults.models['free_proxy/auto']`
-   - `agents.defaults.model.primary === 'free_proxy/auto'`
+   - `models.providers.free-proxy`
+   - `agents.defaults.models['free-proxy/auto']`
+   - `agents.defaults.model.primary === 'free-proxy/auto'`
 
 2. 空配置文件下，`fallback` 模式只创建：
-   - `models.providers.free_proxy`
-   - `agents.defaults.models['free_proxy/auto']`
+   - `models.providers.free-proxy`
+   - `agents.defaults.models['free-proxy/auto']`
    - 不创建 `agents.defaults.model.primary`
    - 不创建 `agents.defaults.model.fallbacks`
 
-3. 已有 `agents.defaults.model.primary` 时，`fallback` 模式会把 `free_proxy/auto` 追加到 `fallbacks`
+3. 已有 `agents.defaults.model.primary` 时，`fallback` 模式会把 `free-proxy/auto` 追加到 `fallbacks`
 
 4. 已有字符串形式 `agents.defaults.model = 'openrouter/auto:free'` 时，`fallback` 模式会自动转成对象结构
 
-5. 连续执行两次 `fallback` 模式不会重复写入 `free_proxy/auto`
+5. 连续执行两次 `fallback` 模式不会重复写入 `free-proxy/auto`
 
 6. 已存在非法 JSON 时返回失败，不覆盖原文件
 
@@ -588,7 +588,7 @@ config.agents.defaults.model.fallbacks = [...new Set([...existingFallbacks, FREE
   "agents": {
     "defaults": {
       "model": {
-        "primary": "free_proxy/auto"
+        "primary": "free-proxy/auto"
       }
     }
   }
@@ -611,7 +611,7 @@ config.agents.defaults.model.fallbacks = [...new Set([...existingFallbacks, FREE
     "defaults": {
       "model": {
         "primary": "原来的模型",
-        "fallbacks": ["...原有内容...", "free_proxy/auto"]
+        "fallbacks": ["...原有内容...", "free-proxy/auto"]
       }
     }
   }
