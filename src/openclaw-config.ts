@@ -4,6 +4,9 @@ import { join } from 'node:path';
 
 const OPENCLAW_DIR = process.env.OPENCLAW_TEST_DIR || join(homedir(), '.openclaw');
 const OPENCLAW_CONFIG_PATH = join(OPENCLAW_DIR, 'openclaw.json');
+const FREE_PROXY_PROVIDER_ID = 'free_proxy';
+const FREE_PROXY_MODEL_ID = 'auto';
+const FREE_PROXY_AGENT_MODEL = 'free_proxy/auto';
 
 export interface OpenClawConfigResult {
   exists: boolean;
@@ -16,6 +19,139 @@ export interface ConfigureResult {
   success: boolean;
   backup?: string | null;
   error?: string;
+}
+
+export type OpenClawModelMode = 'default' | 'fallback';
+
+interface ProviderModel {
+  id: string;
+  name: string;
+}
+
+interface ProviderConfig {
+  baseUrl: string;
+  apiKey: string;
+  api: string;
+  models: ProviderModel[];
+}
+
+interface DefaultsModelConfig {
+  primary?: string;
+  fallbacks?: string[];
+}
+
+interface OpenClawConfigShape {
+  models?: {
+    providers?: Record<string, ProviderConfig>;
+  };
+  agents?: {
+    defaults?: {
+      models?: Record<string, object>;
+      model?: string | DefaultsModelConfig;
+    };
+  };
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function getNextBackupPath(): string {
+  const files = existsSync(OPENCLAW_DIR) ? readdirSync(OPENCLAW_DIR) : [];
+  const existingBackups = files.filter(f => /^openclaw\.bak\d+$/.test(f));
+  const nextNum = existingBackups.length > 0
+    ? Math.max(...existingBackups.map(f => parseInt(f.replace('openclaw.bak', ''), 10) || 0)) + 1
+    : 1;
+  return join(OPENCLAW_DIR, `openclaw.bak${nextNum}`);
+}
+
+function ensureRoot(config: OpenClawConfigShape): Required<Pick<OpenClawConfigShape, 'models' | 'agents'>> & OpenClawConfigShape {
+  if (!isPlainObject(config.models)) {
+    config.models = {};
+  }
+  if (!isPlainObject(config.models.providers)) {
+    config.models.providers = {};
+  }
+  if (!isPlainObject(config.agents)) {
+    config.agents = {};
+  }
+  if (!isPlainObject(config.agents.defaults)) {
+    config.agents.defaults = {};
+  }
+  if (!isPlainObject(config.agents.defaults.models)) {
+    config.agents.defaults.models = {};
+  }
+  return config as Required<Pick<OpenClawConfigShape, 'models' | 'agents'>> & OpenClawConfigShape;
+}
+
+function ensureFreeProxyProvider(config: OpenClawConfigShape): void {
+  const withRoot = ensureRoot(config);
+  const providers = withRoot.models.providers!;
+  const baseUrl = `http://localhost:${process.env.PORT || 8765}/v1`;
+  providers[FREE_PROXY_PROVIDER_ID] = {
+    baseUrl,
+    apiKey: 'any_string',
+    api: 'openai-completions',
+    models: [{ id: FREE_PROXY_MODEL_ID, name: FREE_PROXY_MODEL_ID }]
+  };
+}
+
+function ensureAgentModelAllowlist(config: OpenClawConfigShape): void {
+  const withRoot = ensureRoot(config);
+  const defaults = withRoot.agents.defaults!;
+  const models = defaults.models!;
+  models[FREE_PROXY_AGENT_MODEL] = models[FREE_PROXY_AGENT_MODEL] || {};
+}
+
+function applyDefaultMode(config: OpenClawConfigShape): void {
+  const withRoot = ensureRoot(config);
+  const defaults = withRoot.agents.defaults!;
+  const currentModel = defaults.model;
+  if (!isPlainObject(currentModel)) {
+    defaults.model = { primary: FREE_PROXY_AGENT_MODEL };
+    return;
+  }
+
+  const currentFallbacks = Array.isArray(currentModel.fallbacks)
+    ? currentModel.fallbacks.filter(item => typeof item === 'string')
+    : undefined;
+
+  defaults.model = {
+    ...currentModel,
+    primary: FREE_PROXY_AGENT_MODEL,
+    ...(currentFallbacks ? { fallbacks: currentFallbacks } : {})
+  };
+}
+
+function applyFallbackMode(config: OpenClawConfigShape): void {
+  const withRoot = ensureRoot(config);
+  const defaults = withRoot.agents.defaults!;
+  const currentModel = defaults.model;
+
+  if (!currentModel) {
+    return;
+  }
+
+  if (typeof currentModel === 'string') {
+    defaults.model = {
+      primary: currentModel,
+      fallbacks: [FREE_PROXY_AGENT_MODEL]
+    };
+    return;
+  }
+
+  if (!isPlainObject(currentModel)) {
+    return;
+  }
+
+  const existingFallbacks = Array.isArray(currentModel.fallbacks)
+    ? currentModel.fallbacks.filter(item => typeof item === 'string')
+    : [];
+
+  defaults.model = {
+    ...currentModel,
+    fallbacks: [...new Set([...existingFallbacks, FREE_PROXY_AGENT_MODEL])]
+  };
 }
 
 export async function detectOpenClawConfig(): Promise<OpenClawConfigResult> {
@@ -42,26 +178,21 @@ export async function detectOpenClawConfig(): Promise<OpenClawConfigResult> {
   return result;
 }
 
-export async function mergeConfig(): Promise<ConfigureResult> {
+export async function configureOpenClawModel(mode: OpenClawModelMode): Promise<ConfigureResult> {
   const status = await detectOpenClawConfig();
-  
+
   if (status.exists && !status.isValid) {
     return { success: false, error: 'Invalid JSON' };
   }
 
-  let existingConfig: any = {};
-  
+  let existingConfig: OpenClawConfigShape = {};
+
   if (status.exists && status.isValid) {
-    existingConfig = status.content as object;
+    existingConfig = (status.content as OpenClawConfigShape) || {};
   }
 
-  const files = existsSync(OPENCLAW_DIR) ? readdirSync(OPENCLAW_DIR) : [];
-  const existingBackups = files.filter(f => /^openclaw\.bak\d+$/.test(f));
-  const nextNum = existingBackups.length > 0
-    ? Math.max(...existingBackups.map(f => parseInt(f.replace('openclaw.bak', '')) || 0)) + 1
-    : 1;
-  const backupPath = join(OPENCLAW_DIR, `openclaw.bak${nextNum}`);
-  
+  const backupPath = getNextBackupPath();
+
   if (status.exists) {
     const content = readFileSync(OPENCLAW_CONFIG_PATH, 'utf-8');
     writeFileSync(backupPath, content, 'utf-8');
@@ -71,35 +202,17 @@ export async function mergeConfig(): Promise<ConfigureResult> {
     }
   }
 
-  const baseUrl = `http://localhost:${process.env.PORT || 8765}/v1`;
-  
-  const newConfig: any = JSON.parse(JSON.stringify(existingConfig));
-  
-  if (!newConfig.models) {
-    newConfig.models = {};
-  }
-  if (!newConfig.models.providers) {
-    newConfig.models.providers = {};
-  }
-  
-  newConfig.models.providers.free_proxy = {
-    baseUrl,
-    apiKey: 'any_string',
-    api: 'openai-completions',
-    models: [{ id: 'auto', name: 'auto' }]
-  };
+  const newConfig: OpenClawConfigShape = JSON.parse(JSON.stringify(existingConfig));
+  ensureFreeProxyProvider(newConfig);
+  ensureAgentModelAllowlist(newConfig);
 
-  if (!newConfig.agents) {
-    newConfig.agents = {};
+  if (mode === 'default') {
+    applyDefaultMode(newConfig);
   }
-  if (!newConfig.agents.defaults) {
-    newConfig.agents.defaults = {};
+
+  if (mode === 'fallback') {
+    applyFallbackMode(newConfig);
   }
-  if (!newConfig.agents.defaults.models) {
-    newConfig.agents.defaults.models = {};
-  }
-  
-  newConfig.agents.defaults.models['free_proxy/auto'] = {};
 
   writeFileSync(OPENCLAW_CONFIG_PATH, JSON.stringify(newConfig, null, 2), 'utf-8');
 
@@ -107,6 +220,10 @@ export async function mergeConfig(): Promise<ConfigureResult> {
     success: true,
     backup: status.exists ? backupPath : null
   };
+}
+
+export async function mergeConfig(): Promise<ConfigureResult> {
+  return configureOpenClawModel('default');
 }
 
 export async function listBackups(): Promise<string[]> {

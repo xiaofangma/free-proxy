@@ -295,6 +295,9 @@
   <div class="card" id="openClawSection" style="display: none;">
     <h2>3. 配置 OpenClaw</h2>
     <div id="openClawStatus"></div>
+    <div class="status status-info" style="margin-top: 0.75rem; font-size: 0.85rem;">
+      默认模型按钮会覆盖 OpenClaw 的主模型；备用模型按钮只会追加到备用链，不会覆盖你当前主模型。
+    </div>
     <div id="openClawActions" style="margin-top: 1rem;"></div>
     <div id="backupSection" style="margin-top: 1rem;"></div>
   </div>
@@ -627,13 +630,19 @@
 
         if (data.exists && data.isValid) {
           statusEl.innerHTML = `<div class="status status-success"><strong>✓ 已检测到 OpenClaw</strong><br><span style="font-size: 0.875rem;">配置文件: ${data.path}</span></div>`;
-          actionsEl.innerHTML = `<button class="btn btn-primary" onclick="configureOpenClaw()">更新 OpenClaw 配置</button>`;
+          actionsEl.innerHTML = `
+            <button class="btn btn-primary" onclick="configureOpenClaw('default', event)">设为 OpenClaw 默认模型</button>
+            <button class="btn btn-secondary" onclick="configureOpenClaw('fallback', event)" style="margin-left: 0.5rem;">设为 OpenClaw 备用模型</button>
+          `;
         } else if (data.exists && !data.isValid) {
           statusEl.innerHTML = `<div class="status status-error"><strong>配置文件格式错误</strong><br>请手动检查或删除 ${data.path}</div>`;
           actionsEl.innerHTML = '';
         } else {
           statusEl.innerHTML = `<div class="status status-info"><strong>未检测到 OpenClaw 配置</strong></div>`;
-          actionsEl.innerHTML = `<button class="btn btn-primary" onclick="configureOpenClaw()">创建 OpenClaw 配置</button>`;
+          actionsEl.innerHTML = `
+            <button class="btn btn-primary" onclick="configureOpenClaw('default', event)">创建并设为默认模型</button>
+            <button class="btn btn-secondary" onclick="configureOpenClaw('fallback', event)" style="margin-left: 0.5rem;">创建并设为备用模型</button>
+          `;
         }
 
         loadBackups();
@@ -642,15 +651,28 @@
       }
     }
 
-    async function configureOpenClaw() {
-      const btn = event.target;
+    async function configureOpenClaw(mode, event) {
+      const btn = event && event.target ? event.target : null;
+      if (!btn) {
+        showToast('按钮状态异常，请重试', 'error');
+        return;
+      }
+
+      const originalLabel = btn.innerHTML;
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span>配置中...';
       try {
-        const res = await fetch('/api/configure-openclaw', { method: 'POST' });
+        const res = await fetch('/api/configure-openclaw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode })
+        });
         const data = await res.json();
         if (data.success) {
-          showToast('配置成功');
+          const successText = mode === 'default'
+            ? '已把 free_proxy/auto 设为 OpenClaw 默认模型'
+            : '已把 free_proxy/auto 加入 OpenClaw 备用模型';
+          showToast(successText);
           if (data.backup) {
             showToast(`已创建备份: ${data.backup.split('/').pop()}`, 'info');
           }
@@ -662,7 +684,7 @@
         showToast('配置失败', 'error');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '更新 OpenClaw 配置';
+        btn.innerHTML = originalLabel;
       }
     }
 

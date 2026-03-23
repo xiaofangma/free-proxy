@@ -6,7 +6,7 @@ import { stream } from 'hono/streaming';
 import { getConfig, setConfig, ENV, fetchWithTimeout, saveApiKey, getApiKeyStatus, getProviderKey, saveProviderKey, getAllProviderKeysStatus, saveCustomProvider, saveCustomModel, getCustomModels, deleteCustomModel } from './config';
 import { fetchModels, filterFreeModels, rankModels, fetchAllModels, normalizeProviderModels, clearModelDiscoveryCache } from './models';
 import { executeWithFallback } from './fallback';
-import { detectOpenClawConfig, mergeConfig, listBackups, restoreBackup } from './openclaw-config';
+import { detectOpenClawConfig, configureOpenClawModel, listBackups, restoreBackup } from './openclaw-config';
 import { PROVIDERS, isKnownProvider } from './providers/registry';
 import { validateProviderKey, validateProviderKeyWithKey, verifyModelAvailability, type VerifyReason, buildProviderHeaders, normalizeVerificationModelId } from './provider-health';
 
@@ -712,6 +712,18 @@ app.get('/api/detect-openclaw', async (c) => {
 
 // 7. 一键配置到 OpenClaw
 app.post('/api/configure-openclaw', async (c) => {
+  let mode: unknown;
+  try {
+    const body = await c.req.json();
+    mode = body?.mode;
+  } catch {
+    mode = undefined;
+  }
+
+  if (mode !== 'default' && mode !== 'fallback') {
+    return c.json({ success: false, error: 'Invalid mode' }, 400);
+  }
+
   const providerStatus = await getAllProviderKeysStatus();
   const hasAnyConfigured = Object.values(providerStatus).some(s => s.configured);
   
@@ -719,13 +731,17 @@ app.post('/api/configure-openclaw', async (c) => {
     return c.json({ success: false, error: 'Please configure at least one provider API key first' }, 400);
   }
   
-  const result = await mergeConfig();
+  const result = await configureOpenClawModel(mode);
   
   if (!result.success) {
     return c.json(result, 400);
   }
+
+  const message = mode === 'default'
+    ? '已设为 OpenClaw 默认模型'
+    : '已加入 OpenClaw 备用模型';
   
-  return c.json({ success: true, backup: result.backup, message: 'Configuration successful' });
+  return c.json({ success: true, backup: result.backup, message });
 });
 
 // 8. 获取备份列表
