@@ -1,100 +1,54 @@
 # AGENTS.md
 
-## 项目经验总结
+## 目标与原则（最小够用）
 
-### 1. 架构原则
+- 只实现当前明确需求，拒绝过度设计（KISS / YAGNI）。
+- 优先可运行、可验证的改动；完成后直接收尾，不扩展无关任务。
+- 注释只解释 `Why`，不解释显而易见的 `What`。
+- 强制覆盖边界条件：空值、空数组、网络失败、上游异常。
 
-**最小有效剂量**：只实现当前必需的功能，不为假设的未来场景做过度设计。
+## Python 版关键约定
 
-**做完即收尾**：事情完成后直接结束，不额外延伸无关步骤或多余思考；沟通也保持最小有效剂量。
+- `.env` 固定在项目根目录；不要读 home 目录配置。
+- 运行与测试统一使用 `uv`：
+  - 启动：`uv run free-proxy serve`
+  - 测试：`uv run python -m unittest discover -s python_scripts/tests -p 'test_*.py'`
+- Provider 接入主入口：
+  - 元数据：`python_scripts/provider_catalog.py`
+  - 客户端：`python_scripts/client.py`
+  - 服务编排：`python_scripts/service.py`
+  - 前端卡片：`python_scripts/web/index.html`
 
-**KISS 原则**：保持简单。复杂的抽象层往往比直接代码更难维护。
+## 本次 Longcat 接入沉淀（长期有效）
 
-### 2. 本次开发教训
+- Longcat 走 OpenAI 兼容入口：`https://api.longcat.chat/openai`。
+- 新增 provider 时默认评估 `/models` 可用性；若不稳定，必须提供 `model_hints` 兜底，避免 UI 和验证流程卡死。
+- 前端不会回填真实 API key；只展示 `configured + masked` 状态（通过 `/api/provider-keys`）。
+- 若手工改 `.env` 后服务未重启，可能出现“状态与实际调用不一致”；优先重启后端再验证。
 
-#### API Key 管理
-- 存储位置：`.env` 放在项目根目录（而非 home 子目录），便于测试和用户理解
-- 安全：绝不在 Git 中提交真实 key，`.gitignore` 必须包含 `.env`
+## 测试与发布
 
-#### OpenClaw 配置
-- 路径：使用 `~/.openclaw/openclaw.json`（绝对路径）
-- 检测失败时：提供手动输入路径的选项
-- 备份：修改前自动创建时间戳备份
+- 采用 TDD（red -> green），测试与实现同步提交。
+- 提交前最少执行：
+  - `uv run python -m unittest discover -s python_scripts/tests -p 'test_*.py'`
+  - `npm test`
+  - `npx tsc --noEmit`
+- 清理中间文档（如 `plan.md`），保留并更新长期文档（`docs/research.md` / README）。
 
-#### 模型可用性
-- 不要信任 OpenRouter 返回的免费模型列表
-- 后端仍保留可用性判断和 fallback 兜底
-- 前端不要把“验证”做成阻塞式必经步骤，直接选择更符合当前 UI 体验
-- 候选池：内存中维护，启动时验证 + 用户手动刷新
+## 安全基线
 
-#### 测试策略
-- TDD 是好习惯，但测试文件要和实现同步更新
-- 模拟外部 API 时，测试期望要和实际 HTTP 状态码一致
+- 禁止提交真实 API key；`.gitignore` 必须覆盖 `.env`。
+- 推送前检查：
+  - `git status`
+  - `git diff --stat`
+  - `rg --smart-case "sk-or-|gsk-|ak_|AIza|csk-|ghp_" src __tests__ python_scripts public`
+- 发现泄露立刻停止推送，清理提交历史并轮换对应 key。
 
-### 3. 代码规范
+## 文档维护
 
-**不要：**
-- 添加不必要的 JSDoc 注释
-- 使用 `any` 类型
-- 过度工程化的抽象层
+- 复杂功能或重构先写执行计划，规范见 `.agent/PLANS.md`。
+- 执行计划属于过程文档，任务完成后应清理；结论沉淀到长期文档。
 
-**要：**
-- 注释解释 "Why" 而非 "What"
-- 强制处理边界条件（null、空数组、网络错误）
-- 错误信息对小白友好（不暴露技术细节）
+## 工具规范
 
-### 4. 调试技巧
-
-```bash
-# 检查端口占用
-lsof -i :8765
-
-# 查看服务日志
-npm start 2>&1 | tail -50
-
-# 测试 API
-curl -X POST http://localhost:8765/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model":"auto","messages":[{"role":"user","content":"hi"}]}'
-```
-
-### 5. 安全检查（推送 GitHub 前必做）
-
-```bash
-# 1. 清理本地敏感文件
-rm -f  config.env config.json rate-limit-state.json
-
-# 2. 检查待提交文件
-git status
-
-# 3. 扫描历史记录中的 API key
-git log --all -p | grep -E "sk-or-[a-zA-Z0-9]{40,}"
-
-# 4. 检查源代码中是否硬编码了 key
-grep -r "sk-or-" src/ __tests__/ public/ --include="*.ts" --include="*.html" --include="*.js"
-
-# 5. 确认 .gitignore 包含敏感文件
-cat .gitignore | grep -E "\.env|config\.json"
-
-# 6. 使用 trufflehog 深度扫描（可选）
-trufflehog git file://. --only-verified 2>/dev/null || echo "trufflehog 未安装"
-```
-
-**如果发现问题：**
-- 立即停止推送
-- 删除包含敏感信息的提交（`git rebase -i` 或 `git filter-repo`）
-- 在 OpenRouter 删除泄露的 key 并重新生成
-
-### 6. 发布 checklist
-
-- [ ] 运行安全检查（第 5 节所有步骤）
-- [ ] 更新 README.md
-- [ ] 做 git 提交前先把 `research.md` 更新到最新状态
-- [ ] 运行 `npm test`（确保不报错）
-- [ ] 运行 `npx tsc --noEmit`（类型检查通过）
-- [ ] 清理中间文档（plan.md 等）；`research.md` 需保留并保持最新
-- [ ] 推送前最后确认：`git diff --stat`
-
-### 7. 文档维护约定
-执行计划 (ExecPlans)
-在编写复杂功能或进行重大重构时，请参考 `.agent/PLANS.md` 中的说明，在从设计到实现的整个过程中使用执行计划 (ExecPlan)。
+- 代码搜索必须优先使用 `rg`，并默认带 `--smart-case`；按需加 `--context`。

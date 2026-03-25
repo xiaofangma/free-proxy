@@ -18,7 +18,7 @@
 
 ## 核心功能
 
-- 聚合 8 家 provider（OpenRouter / Groq / OpenCode / Gemini / GitHub Models / Mistral / Cerebras / SambaNova）
+- 聚合 9 家 provider（OpenRouter / Groq / OpenCode / Longcat / Gemini / GitHub Models / Mistral / Cerebras / SambaNova）
 - 自动回退：当前模型失败或限流时自动切换到可用模型
 - 手动添加模型：支持 `provider+modelId` 直接添加
 - 本地 Web 配置：卡片式保存 API Key，直接选模型并更新 OpenClaw

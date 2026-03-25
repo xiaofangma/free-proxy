@@ -78,11 +78,11 @@ class ProviderClient:
     def list_models(self) -> list[str]:
         status, _, data = self._request_json('GET', '/models')
         if status >= 400:
-            if self.spec.name in {'github', 'cerebras', 'groq'}:
+            if self.spec.name in {'github', 'cerebras', 'groq', 'longcat'}:
                 return get_provider_model_hints(self.spec.name)
             self._raise_http_error(status, data, '获取模型失败')
 
-        if self.spec.name in {'github', 'cerebras', 'groq'} and (not data or not isinstance(data, (dict, list))):
+        if self.spec.name in {'github', 'cerebras', 'groq', 'longcat'} and (not data or not isinstance(data, (dict, list))):
             return get_provider_model_hints(self.spec.name)
 
         models: list[dict[str, Any]] = []

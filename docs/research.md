@@ -258,6 +258,45 @@
 
 ### 4.1 测试配置
 
+## 12. Python 版 Longcat Provider 接入（2026-03-25）
+
+### 12.1 接入结论
+
+- Python 版新增 provider：`longcat`
+- Base URL：`https://api.longcat.chat/openai`
+- API Key 环境变量：`LONGCAT_API_KEY`
+- 协议格式：OpenAI 兼容
+
+### 12.2 设计取舍
+
+- Longcat 复用 `python_scripts/client.py` 现有的 OpenAI chat completions 路径，不新增专用客户端分支。
+- Python UI 的模型浏览不能依赖某个 provider 一定实现 `GET /models`。因此 Longcat 和 GitHub/Cerebras/Groq 一样，在模型列表失败时回退到内置 `model_hints`。
+- 首批内置候选模型为：
+  - `LongCat-Flash-Chat`
+  - `LongCat-Flash-Thinking`
+  - `LongCat-Flash-Thinking-2601`
+  - `LongCat-Flash-Lite`
+
+### 12.3 代码落点
+
+- `python_scripts/provider_catalog.py`：注册 Longcat 元数据
+- `python_scripts/client.py`：把 Longcat 纳入 `/models` 失败回退名单
+- `python_scripts/web/index.html`：新增 Longcat 配置卡片
+- `python_scripts/tests/test_config.py`
+- `python_scripts/tests/test_client.py`
+- `python_scripts/tests/test_service.py`
+
+### 12.4 验证结果
+
+已执行：
+
+    python3 -m unittest python_scripts.tests.test_config python_scripts.tests.test_client python_scripts.tests.test_provider_matrix python_scripts.tests.test_service
+
+结果：
+
+    Ran 20 tests in 0.005s
+    OK
+
 - **框架**：Jest 30 + ts-jest
 - **运行方式**：`node --experimental-vm-modules node_modules/jest/bin/jest.js`
 - **模块系统**：ESM（通过 `ts-jest` 的 `useESM` 选项）
@@ -403,7 +442,7 @@ or_free-proxy/
 ├── package.json            # 项目依赖
 ├── tsconfig.json           # TypeScript 配置
 ├── jest.config.js          # Jest 测试配置
-└── plan.md                 # 开发计划
+└── docs/research.md        # 长期研究文档（过程计划不保留）
 ```
 
 ---

@@ -33,6 +33,13 @@ PROVIDERS: tuple[ProviderMeta, ...] = (
         model_hints=('llama-3.1-8b-instant', 'llama-3.3-70b-versatile'),
     ),
     ProviderMeta('opencode', 'https://opencode.ai/zen/v1', 'OPENCODE_API_KEY', 'openai', model_hints=('auto',)),
+    ProviderMeta(
+        'longcat',
+        'https://api.longcat.chat/openai',
+        'LONGCAT_API_KEY',
+        'openai',
+        model_hints=('LongCat-Flash-Chat', 'LongCat-Flash-Thinking', 'LongCat-Flash-Thinking-2601', 'LongCat-Flash-Lite'),
+    ),
     ProviderMeta('gemini', 'https://generativelanguage.googleapis.com/v1beta', 'GEMINI_API_KEY', 'gemini', model_hints=('gemini-2.0-flash',)),
     ProviderMeta(
         'github',

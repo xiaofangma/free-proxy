@@ -23,12 +23,17 @@ class ConfigTests(unittest.TestCase):
 
     def test_provider_specs_are_backed_by_catalog(self) -> None:
         specs = get_provider_specs()
-        self.assertGreaterEqual(len(specs), 8)
+        self.assertGreaterEqual(len(specs), 9)
 
         names = {spec.name for spec in specs}
         self.assertIn('openrouter', names)
         self.assertIn('gemini', names)
+        self.assertIn('longcat', names)
 
         github = get_provider_spec('github')
         self.assertEqual(github.base_url, 'https://models.github.ai/inference')
         self.assertEqual(github.api_key_env, 'GITHUB_MODELS_API_KEY')
+
+        longcat = get_provider_spec('longcat')
+        self.assertEqual(longcat.base_url, 'https://api.longcat.chat/openai')
+        self.assertEqual(longcat.api_key_env, 'LONGCAT_API_KEY')

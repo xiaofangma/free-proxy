@@ -16,7 +16,7 @@ One-line overview: free, easy to use, and enough for everyday OpenClaw usage.
 
 ## Core features
 
-- Aggregates 8 providers: OpenRouter / Groq / OpenCode / Gemini / GitHub Models / Mistral / Cerebras / SambaNova
+- Aggregates 9 providers: OpenRouter / Groq / OpenCode / Longcat / Gemini / GitHub Models / Mistral / Cerebras / SambaNova
 - Automatic fallback when a model fails or gets rate-limited
 - Manual model add with `provider+modelId`
 - Local web UI with card-style settings, model selection, and OpenClaw config updates

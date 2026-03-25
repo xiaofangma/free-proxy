@@ -97,6 +97,19 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(client.list_models(), ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile'])
         self.assertEqual(client.chat('llama-3.1-8b-instant', 'ok'), 'ok')
 
+    def test_longcat_model_hint_fallback_on_list_error(self) -> None:
+        spec = get_provider_spec('longcat')
+        transport = FakeTransport({
+            ('GET', 'https://api.longcat.chat/openai/models'): (404, {}, json.dumps({'error': {'message': 'not found'}}).encode()),
+            ('POST', 'https://api.longcat.chat/openai/chat/completions'): (200, {}, json.dumps({'choices': [{'message': {'content': 'ok'}}]}).encode()),
+        })
+        client = ProviderClient(spec=spec, api_key='x', transport=transport)
+        self.assertEqual(
+            client.list_models(),
+            ['LongCat-Flash-Chat', 'LongCat-Flash-Thinking', 'LongCat-Flash-Thinking-2601', 'LongCat-Flash-Lite'],
+        )
+        self.assertEqual(client.chat('LongCat-Flash-Chat', 'ok'), 'ok')
+
     def test_gemini_normalizes_models_and_chat(self) -> None:
         spec = get_provider_spec('gemini')
         transport = FakeTransport({

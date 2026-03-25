@@ -116,11 +116,15 @@ class ServiceTests(unittest.TestCase):
 
             before = service.provider_key_statuses()
             self.assertFalse(before['openrouter']['configured'])
+            self.assertFalse(before['longcat']['configured'])
 
             service.save_provider_key('openrouter', 'sk-example-123456')
+            service.save_provider_key('longcat', 'lc-example-123456')
             after = service.provider_key_statuses()
             self.assertTrue(after['openrouter']['configured'])
             self.assertIn('***', after['openrouter']['masked'])
+            self.assertTrue(after['longcat']['configured'])
+            self.assertEqual(after['longcat']['env'], 'LONGCAT_API_KEY')
 
     def test_verify_provider_key_and_recommended_models(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
