@@ -1,5 +1,101 @@
 # Free Proxy 深度研究报告
 
+> 维护说明（2026-03-25）：本文件保留 TypeScript 历史分析背景，但当前生产主线已经切换到 `python_scripts/`。如果内容冲突，以 Python 主线实现为准；TypeScript 相关章节仅作历史设计参考。TypeScript 历史档案见 `docs/typescript-legacy.md`。
+
+## 0. 当前主线实现快照（Python，2026-03-25）
+
+### 0.1 当前真正对外可用的入口
+
+- 主服务入口：`python_scripts/server.py`
+- 服务编排：`python_scripts/service.py`
+- Provider 元数据：`python_scripts/provider_catalog.py`
+- OpenClaw 配置写入：`python_scripts/openclaw_config.py`
+- Opencode 配置写入：`python_scripts/opencode_config.py`
+
+### 0.2 当前对外接口
+
+- `GET /health`
+- `GET /v1/models`
+- `POST /v1/chat/completions`
+- `GET /api/provider-keys`
+- `POST /api/provider-keys/:provider`
+- `POST /api/provider-keys/:provider/verify`
+- `GET /api/detect-openclaw`
+- `POST /api/configure-openclaw`
+- `GET /api/detect-opencode`
+- `POST /api/configure-opencode`
+
+说明：
+
+- `GET /v1/models` 是这次补齐的关键兼容接口。网页 UI 之前能用，不代表 coding agent / SDK 能用；很多客户端会先探测模型列表。
+- `POST /v1/chat/completions` 现在既支持真实 provider/model，也支持稳定别名。
+
+### 0.3 当前公开模型语义
+
+当前面向外部客户端公开的稳定模型别名只有两个：
+
+- `free-proxy/auto`：通用入口，强调先跑起来。
+- `free-proxy/coding`：代码任务入口，优先给 coding agent / OpenClaw / Python SDK 使用。
+
+Python 服务端内部仍保留对旧命名的兼容，但对外统一名称已经收敛为：
+
+- `free-proxy/auto`
+- `free-proxy/coding`
+
+`free_proxy/...` 现在只作为旧配置迁移兼容存在，不再作为文档推荐写法。
+
+### 0.4 OpenClaw 与 Opencode 的关键差异
+
+当前已经统一成一个规则：
+
+- OpenClaw provider id：`free-proxy`
+- Opencode provider id：`free-proxy`
+- OpenClaw 模型写法：`free-proxy/coding`
+- Opencode 模型写法：`free-proxy/coding`
+
+如果用户本地还残留 `free_proxy`，那是旧配置，需要迁移，不应再继续扩散。
+
+### 0.5 当前配置写入行为
+
+#### OpenClaw
+
+`python_scripts/openclaw_config.py` 现在会写入：
+
+- provider：`free-proxy`
+- baseUrl：`http://localhost:8765/v1`
+- models：`auto`、`coding`
+
+默认模式仍保守把主模型写成 `free-proxy/auto`，避免破坏已有用户习惯；但文档和实际推荐都建议 coding 场景优先使用 `free-proxy/coding`。
+
+#### Opencode
+
+`python_scripts/opencode_config.py` 现在会写入：
+
+- provider：`free-proxy`
+- baseURL：`http://localhost:8765/v1`
+- models：`auto`、`coding`
+
+验证命令：
+
+    opencode run -m free-proxy/coding "Reply with exactly OK"
+
+### 0.6 已完成真实验证
+
+本次实现已经通过以下真实验证：
+
+- `uv run python -m unittest discover -s python_scripts/tests -p 'test_*.py'`
+- `npm test`
+- `npx tsc --noEmit`
+- `curl http://127.0.0.1:8765/v1/models`
+- `curl POST http://127.0.0.1:8765/v1/chat/completions` with `free-proxy/coding`
+- `opencode run -m free-proxy/coding "Reply with exactly OK"`
+- Python OpenAI SDK:
+
+      from openai import OpenAI
+      client = OpenAI(base_url='http://127.0.0.1:8765/v1', api_key='dummy')
+      client.models.list()
+      client.chat.completions.create(model='free-proxy/coding', ...)
+
 ## 1. 项目概述
 
 **项目名称**：Free Proxy (`free-proxy`)  
@@ -258,6 +354,45 @@
 
 ### 4.1 测试配置
 
+## 12. Python 版 Longcat Provider 接入（2026-03-25）
+
+### 12.1 接入结论
+
+- Python 版新增 provider：`longcat`
+- Base URL：`https://api.longcat.chat/openai`
+- API Key 环境变量：`LONGCAT_API_KEY`
+- 协议格式：OpenAI 兼容
+
+### 12.2 设计取舍
+
+- Longcat 复用 `python_scripts/client.py` 现有的 OpenAI chat completions 路径，不新增专用客户端分支。
+- Python UI 的模型浏览不能依赖某个 provider 一定实现 `GET /models`。因此 Longcat 和 GitHub/Cerebras/Groq 一样，在模型列表失败时回退到内置 `model_hints`。
+- 首批内置候选模型为：
+  - `LongCat-Flash-Chat`
+  - `LongCat-Flash-Thinking`
+  - `LongCat-Flash-Thinking-2601`
+  - `LongCat-Flash-Lite`
+
+### 12.3 代码落点
+
+- `python_scripts/provider_catalog.py`：注册 Longcat 元数据
+- `python_scripts/client.py`：把 Longcat 纳入 `/models` 失败回退名单
+- `python_scripts/web/index.html`：新增 Longcat 配置卡片
+- `python_scripts/tests/test_config.py`
+- `python_scripts/tests/test_client.py`
+- `python_scripts/tests/test_service.py`
+
+### 12.4 验证结果
+
+已执行：
+
+    python3 -m unittest python_scripts.tests.test_config python_scripts.tests.test_client python_scripts.tests.test_provider_matrix python_scripts.tests.test_service
+
+结果：
+
+    Ran 20 tests in 0.005s
+    OK
+
 - **框架**：Jest 30 + ts-jest
 - **运行方式**：`node --experimental-vm-modules node_modules/jest/bin/jest.js`
 - **模块系统**：ESM（通过 `ts-jest` 的 `useESM` 选项）
@@ -403,7 +538,7 @@ or_free-proxy/
 ├── package.json            # 项目依赖
 ├── tsconfig.json           # TypeScript 配置
 ├── jest.config.js          # Jest 测试配置
-└── plan.md                 # 开发计划
+└── docs/research.md        # 长期研究文档（过程计划不保留）
 ```
 
 ---

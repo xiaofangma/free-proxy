@@ -16,7 +16,7 @@ One-line overview: free, easy to use, and enough for everyday OpenClaw usage.
 
 ## Core features
 
-- Aggregates 8 providers: OpenRouter / Groq / OpenCode / Gemini / GitHub Models / Mistral / Cerebras / SambaNova
+- Aggregates 9 providers: OpenRouter / Groq / OpenCode / Longcat / Gemini / GitHub Models / Mistral / Cerebras / SambaNova
 - Automatic fallback when a model fails or gets rate-limited
 - Manual model add with `provider+modelId`
 - Local web UI with card-style settings, model selection, and OpenClaw config updates
@@ -24,44 +24,132 @@ One-line overview: free, easy to use, and enough for everyday OpenClaw usage.
 
 ## Quick start
 
-1) Clone and install dependencies
+1) Clone the repository
 
 ```bash
 git clone https://github.com/lichengiggs/free-proxy.git
 cd free-proxy
-npm install
 ```
 
-2) Start
+2) Install [uv](https://docs.astral.sh/uv/) (if you don't have it yet)
 
 ```bash
-npm start
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# or Homebrew
+brew install uv
 ```
 
-For beginners: after running `npm start`, keep this terminal open.
+3) Initialize and start
 
-3) Open the setup page and save at least one provider API key
+```bash
+uv sync
+uv run free-proxy serve
+```
+
+For beginners: keep this terminal open after startup.
+
+4) Open the setup page and save at least one provider API key
 
 - Visit: `http://localhost:8765`
 - After saving a key, you can pick a model and start using it
 
+## Common integrations
+
+- OpenAI-compatible clients / Python SDK
+  - Base URL: `http://127.0.0.1:8765/v1`
+  - Model: `free-proxy/coding` for coding tasks, or `free-proxy/auto` for general use
+  - Minimal example:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="not-needed",
+    base_url="http://127.0.0.1:8765/v1",
+)
+
+resp = client.chat.completions.create(
+    model="free-proxy/coding",
+    messages=[{"role": "user", "content": "Reply with exactly OK"}],
+)
+
+print(resp.choices[0].message.content)
+```
+
+- OpenClaw
+  - Provider ID: `free-proxy`
+  - Base URL: `http://localhost:8765/v1`
+  - Models: `auto`, `coding`
+  - Recommended model: `free-proxy/coding`
+  - Conservative fallback entry: `free-proxy/auto`
+
+- Opencode
+  - Provider ID: `free-proxy`
+  - Config path is usually: `~/.config/opencode/opencode.json`
+  - Base URL: `http://localhost:8765/v1`
+  - Recommended command: `opencode run -m free-proxy/coding "Reply with exactly OK"`
+  - Conservative command: `opencode run -m free-proxy/auto "Reply with exactly OK"`
+
+## Current external behavior
+
+- Standard OpenAI-compatible routes:
+  - `GET /v1/models`
+  - `POST /v1/chat/completions`
+- Stable public model aliases:
+  - `free-proxy/auto`
+  - `free-proxy/coding`
+- OpenClaw config writer creates:
+  - provider: `free-proxy`
+  - models: `auto`, `coding`
+- Opencode config writer creates:
+  - provider: `free-proxy`
+  - models: `auto`, `coding`
+
+If you only want the shortest path:
+
+1. OpenAI / Python SDK / generic compatible clients: use `free-proxy/coding`
+2. Opencode: use `free-proxy/coding`
+
 ## FAQ
 
-- Network error: make sure the service is running with `npm start`, then open `http://localhost:8765`
+- Network error: make sure the service is running with `uv run free-proxy serve`, then open `http://localhost:8765`
 - No available model: free models may be rate-limited temporarily; click **Refresh model list** or add a known-available model manually
 - Where keys are stored: local `.env` file only (not uploaded)
+- If an older Opencode config still contains `free_proxy`
+  - That is the legacy name
+  - The unified name is now `free-proxy`
+  - Re-run config writing and use `free-proxy/...`
 
 ## Dev commands
 
 ```bash
-# start
-npm start
+# start backend
+uv run free-proxy serve
 
-# test
+# list subcommands
+uv run free-proxy --help
+
+# list models
+uv run free-proxy models --provider sambanova
+
+# probe one model
+uv run free-proxy probe --provider sambanova --model DeepSeek-V3-0324
+
+# python tests
+uv run python -m unittest discover -s python_scripts/tests -p 'test_*.py'
+
+# frontend/legacy static tests
+# (run npm install first if dependencies are missing)
 npm test
-
-python3 test_proxy.py
 ```
+
+## Legacy implementation
+
+- The TypeScript backend is now archived for reference only.
+- See: `docs/typescript-legacy.md`
+- Migration notes: `docs/migration-python-mainline.md`
 
 ## License
 

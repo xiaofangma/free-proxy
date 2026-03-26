@@ -1,102 +1,104 @@
 # AGENTS.md
 
-## 项目经验总结
+## 目标与原则（最小够用）
 
-### 1. 架构原则
+- 只实现当前明确需求，拒绝过度设计（KISS / YAGNI）。
+- 优先可运行、可验证的改动；完成后直接收尾，不扩展无关任务。
+- 注释只解释 `Why`，不解释显而易见的 `What`。
+- 强制覆盖边界条件：空值、空数组、网络失败、上游异常。
 
-**最小有效剂量**：只实现当前必需的功能，不为假设的未来场景做过度设计。
+## Python 版关键约定
 
-**做完即收尾**：事情完成后直接结束，不额外延伸无关步骤或多余思考；沟通也保持最小有效剂量。
+- `.env` 固定在项目根目录；不要读 home 目录配置。
+- 运行与测试统一使用 `uv`：
+  - 启动：`uv run free-proxy serve`
+  - 测试：`uv run python -m unittest discover -s python_scripts/tests -p 'test_*.py'`
+- Provider 接入主入口：
+  - 元数据：`python_scripts/provider_catalog.py`
+  - 客户端：`python_scripts/client.py`
+  - 服务编排：`python_scripts/service.py`
+  - 前端卡片：`python_scripts/web/index.html`
 
-**KISS 原则**：保持简单。复杂的抽象层往往比直接代码更难维护。
+## 当前对外兼容面（长期有效）
 
-### 2. 本次开发教训
+- OpenAI 兼容接口必须保持：
+  - `GET /v1/models`
+  - `POST /v1/chat/completions`
+- 当前公开稳定模型别名：
+  - `free-proxy/auto`
+  - `free-proxy/coding`
+- Python 服务端需要兼容的别名输入：
+  - `auto` / `coding`
+  - `free-proxy/auto` / `free-proxy/coding`
+  - `free_proxy/auto` / `free_proxy/coding`（仅旧配置迁移兼容，不再作为文档推荐写法）
 
-#### API Key 管理
-- 存储位置：`.env` 放在项目根目录（而非 home 子目录），便于测试和用户理解
-- 安全：绝不在 Git 中提交真实 key，`.gitignore` 必须包含 `.env`
+## OpenClaw / Opencode 配置约定（长期有效）
 
-#### OpenClaw 配置
-- 路径：使用 `~/.openclaw/openclaw.json`（绝对路径）
-- 检测失败时：提供手动输入路径的选项
-- 备份：修改前自动创建时间戳备份
+- OpenClaw 配置写入：
+  - 文件：`python_scripts/openclaw_config.py`
+  - provider id：`free-proxy`
+  - 写入模型：`auto`、`coding`
+  - 默认主模型仍保持 `free-proxy/auto`，避免破坏旧用户习惯。
 
-#### 模型可用性
-- 不要信任 OpenRouter 返回的免费模型列表
-- 后端仍保留可用性判断和 fallback 兜底
-- 前端不要把“验证”做成阻塞式必经步骤，直接选择更符合当前 UI 体验
-- 候选池：内存中维护，启动时验证 + 用户手动刷新
+- Opencode 配置写入：
+  - 文件：`python_scripts/opencode_config.py`
+  - provider id：`free-proxy`
+  - 写入模型：`auto`、`coding`
+  - 文档、示例、验证命令统一使用 `free-proxy/...`。
 
-#### 测试策略
-- TDD 是好习惯，但测试文件要和实现同步更新
-- ESM 模式下测试不能用 `require('fs')`，必须用顶层 `import`
-- 模拟外部 API 时，测试期望要和实际 HTTP 状态码一致
+## 本次 Longcat 接入沉淀（长期有效）
 
-### 3. 代码规范
+- Longcat 走 OpenAI 兼容入口：`https://api.longcat.chat/openai`。
+- 新增 provider 时默认评估 `/models` 可用性；若不稳定，必须提供 `model_hints` 兜底，避免 UI 和验证流程卡死。
+- 前端不会回填真实 API key；只展示 `configured + masked` 状态（通过 `/api/provider-keys`）。
+- 若手工改 `.env` 后服务未重启，可能出现“状态与实际调用不一致”；优先重启后端再验证。
 
-**不要：**
-- 添加不必要的 JSDoc 注释
-- 使用 `any` 类型
-- 过度工程化的抽象层
+## UI / 验证链路沉淀（长期有效）
 
-**要：**
-- 注释解释 "Why" 而非 "What"
-- 强制处理边界条件（null、空数组、网络错误）
-- 错误信息对小白友好（不暴露技术细节）
+- 控制台主流程固定为：先配置 provider，再选推荐模型，最后在同一工作区完成探测与聊天验证；不要再回到“分散多个结果面板”的设计。
+- 成功结果只保留一个主展示区，避免“诊断摘要 + 纯正文”重复显示同一份内容。
+- 诊断信息必须优先展示可操作字段：`action`、`provider`、`model`、`error`、`category`、`status`、`suggestion`；不要只给一句模糊失败。
+- 接入说明、README、页面文案必须统一引用真实稳定接口：`/v1/models`、`/v1/chat/completions`、`free-proxy/auto`、`free-proxy/coding`。不要把页面内部调试接口如 `/chat/completions` 写进对外文档。
+- 遇到“长回复被截断”时，先检查上游请求参数和 provider 返回，尤其是 `max_tokens` / `maxOutputTokens`，不要先假设是前端滚动或 DOM 截断问题。
+- `probe` 和真实 `chat` 的输出预算必须分离：探测保持小输出，聊天按 provider 正常输出预算返回正文，避免把探测配置误复用到真实聊天。
 
-### 4. 调试技巧
+## 测试与发布
 
-```bash
-# 检查端口占用
-lsof -i :8765
+- 采用 TDD（red -> green），测试与实现同步提交。
+- 提交前最少执行：
+  - `uv run python -m unittest discover -s python_scripts/tests -p 'test_*.py'`
+  - `npm test`
+  - `npx tsc --noEmit`
+- 清理中间文档（如 `plan.md`），保留并更新长期文档（`docs/research.md` / README）。
 
-# 查看服务日志
-npm start 2>&1 | tail -50
+## Git 提交规范
 
-# 测试 API
-curl -X POST http://localhost:8765/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model":"auto","messages":[{"role":"user","content":"hi"}]}'
-```
+- commit message 用英文、小写开头、祈使句，首行只写一件事，不加句号。
+- 推荐格式：`<verb> <scope> <intent>`
+- 常用动词：`refine`、`fix`、`add`、`remove`、`align`、`document`、`test`
+- scope 优先写真实改动面：`python console ui`、`provider routing`、`openclaw config`、`docs`、`tests`
+- intent 直接写用户可感知结果或技术结果：`fix chat truncation`、`align sdk docs`、`simplify provider cards`
+- 避免空泛 message：`update files`、`misc fixes`、`wip`、`tmp`
+- 若同时包含“界面整理 + 缺陷修复”，优先把用户影响更大的结果写进 message，例如：`refine python console ui and fix chat truncation`
 
-### 5. 安全检查（推送 GitHub 前必做）
+## 安全基线
 
-```bash
-# 1. 清理本地敏感文件
-rm -f .env config.env config.json rate-limit-state.json
+- 禁止提交真实 API key；`.gitignore` 必须覆盖 `.env`。
+- 推送前检查：
+  - `git status`
+  - `git diff --stat`
+  - `rg --smart-case "sk-or-|gsk-|ak_|AIza|csk-|ghp_" src __tests__ python_scripts public`
+- 发现泄露立刻停止推送，清理提交历史并轮换对应 key。
 
-# 2. 检查待提交文件
-git status
+## 文档维护
 
-# 3. 扫描历史记录中的 API key
-git log --all -p | grep -E "sk-or-[a-zA-Z0-9]{40,}"
+- 复杂功能或重构先写执行计划，规范见 `.agent/PLANS.md`。
+- 执行计划属于过程文档，任务完成后应清理；结论沉淀到长期文档。
+- 用户文档必须优先覆盖三条真实使用路径：
+  - OpenAI / Python SDK：`free-proxy/coding`
+  - OpenClaw：`free-proxy/coding`
+  - Opencode：`free-proxy/coding`
 
-# 4. 检查源代码中是否硬编码了 key
-grep -r "sk-or-" src/ __tests__/ public/ --include="*.ts" --include="*.html" --include="*.js"
+## 工具规范
 
-# 5. 确认 .gitignore 包含敏感文件
-cat .gitignore | grep -E "\.env|config\.json"
-
-# 6. 使用 trufflehog 深度扫描（可选）
-trufflehog git file://. --only-verified 2>/dev/null || echo "trufflehog 未安装"
-```
-
-**如果发现问题：**
-- 立即停止推送
-- 删除包含敏感信息的提交（`git rebase -i` 或 `git filter-repo`）
-- 在 OpenRouter 删除泄露的 key 并重新生成
-
-### 6. 发布 checklist
-
-- [ ] 运行安全检查（第 5 节所有步骤）
-- [ ] 更新 README.md
-- [ ] 做 git 提交前先把 `research.md` 更新到最新状态
-- [ ] 运行 `npm test`（确保不报错）
-- [ ] 运行 `npx tsc --noEmit`（类型检查通过）
-- [ ] 清理中间文档（plan.md 等）；`research.md` 需保留并保持最新
-- [ ] 推送前最后确认：`git diff --stat`
-
-### 7. 文档维护约定
-
-- `research.md` 是当前项目的详细情况说明，优先保留并及时更新，避免被误删除。
-- 如果需要清理临时文档，不要把 `research.md` 当成可删除的中间文件。
+- 代码搜索必须优先使用 `rg`，并默认带 `--smart-case`；按需加 `--context`。
