@@ -53,6 +53,15 @@
 - 前端不会回填真实 API key；只展示 `configured + masked` 状态（通过 `/api/provider-keys`）。
 - 若手工改 `.env` 后服务未重启，可能出现“状态与实际调用不一致”；优先重启后端再验证。
 
+## UI / 验证链路沉淀（长期有效）
+
+- 控制台主流程固定为：先配置 provider，再选推荐模型，最后在同一工作区完成探测与聊天验证；不要再回到“分散多个结果面板”的设计。
+- 成功结果只保留一个主展示区，避免“诊断摘要 + 纯正文”重复显示同一份内容。
+- 诊断信息必须优先展示可操作字段：`action`、`provider`、`model`、`error`、`category`、`status`、`suggestion`；不要只给一句模糊失败。
+- 接入说明、README、页面文案必须统一引用真实稳定接口：`/v1/models`、`/v1/chat/completions`、`free-proxy/auto`、`free-proxy/coding`。不要把页面内部调试接口如 `/chat/completions` 写进对外文档。
+- 遇到“长回复被截断”时，先检查上游请求参数和 provider 返回，尤其是 `max_tokens` / `maxOutputTokens`，不要先假设是前端滚动或 DOM 截断问题。
+- `probe` 和真实 `chat` 的输出预算必须分离：探测保持小输出，聊天按 provider 正常输出预算返回正文，避免把探测配置误复用到真实聊天。
+
 ## 测试与发布
 
 - 采用 TDD（red -> green），测试与实现同步提交。
@@ -61,6 +70,16 @@
   - `npm test`
   - `npx tsc --noEmit`
 - 清理中间文档（如 `plan.md`），保留并更新长期文档（`docs/research.md` / README）。
+
+## Git 提交规范
+
+- commit message 用英文、小写开头、祈使句，首行只写一件事，不加句号。
+- 推荐格式：`<verb> <scope> <intent>`
+- 常用动词：`refine`、`fix`、`add`、`remove`、`align`、`document`、`test`
+- scope 优先写真实改动面：`python console ui`、`provider routing`、`openclaw config`、`docs`、`tests`
+- intent 直接写用户可感知结果或技术结果：`fix chat truncation`、`align sdk docs`、`simplify provider cards`
+- 避免空泛 message：`update files`、`misc fixes`、`wip`、`tmp`
+- 若同时包含“界面整理 + 缺陷修复”，优先把用户影响更大的结果写进 message，例如：`refine python console ui and fix chat truncation`
 
 ## 安全基线
 

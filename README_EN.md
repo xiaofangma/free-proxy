@@ -60,15 +60,35 @@ For beginners: keep this terminal open after startup.
 - OpenAI-compatible clients / Python SDK
   - Base URL: `http://127.0.0.1:8765/v1`
   - Model: `free-proxy/coding` for coding tasks, or `free-proxy/auto` for general use
+  - Minimal example:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="not-needed",
+    base_url="http://127.0.0.1:8765/v1",
+)
+
+resp = client.chat.completions.create(
+    model="free-proxy/coding",
+    messages=[{"role": "user", "content": "Reply with exactly OK"}],
+)
+
+print(resp.choices[0].message.content)
+```
 
 - OpenClaw
   - Provider ID: `free-proxy`
+  - Base URL: `http://localhost:8765/v1`
+  - Models: `auto`, `coding`
   - Recommended model: `free-proxy/coding`
   - Conservative fallback entry: `free-proxy/auto`
 
 - Opencode
   - Provider ID: `free-proxy`
   - Config path is usually: `~/.config/opencode/opencode.json`
+  - Base URL: `http://localhost:8765/v1`
   - Recommended command: `opencode run -m free-proxy/coding "Reply with exactly OK"`
   - Conservative command: `opencode run -m free-proxy/auto "Reply with exactly OK"`
 
